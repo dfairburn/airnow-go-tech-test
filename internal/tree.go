@@ -2,9 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
 	"log"
-	"net/http"
 	"net/url"
 )
 
@@ -31,12 +29,13 @@ func newNode(url string) *Node {
 }
 
 func (n *Node) Walk(root *Node, currLevel int, nestLevel int) {
-	doc, err := get(root, n.url)
+	doc, err := get(n.url)
 	if err != nil {
+		root.remove(n.url)
 		log.Println(err)
 	}
 
-	if currLevel == nestLevel {
+	if currLevel >= nestLevel {
 		return
 	}
 
@@ -65,23 +64,6 @@ func (n *Node) String(s string, indentLevel int) string {
 	return s
 }
 
-func get(root *Node, target string) (*goquery.Document, error) {
-	res, err := http.Get(target)
-	if err != nil {
-		root.remove(target)
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		root.remove(target)
-		return nil, err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	return doc, err
-}
-
 func (n *Node) remove(target string) {
 	for i, child := range n.children {
 		if child.url == target {
@@ -100,27 +82,6 @@ func (n *Node) insert(root *Node, child *Node) {
 	}
 
 	n.children = append(n.children, child)
-}
-
-func getLinks(doc *goquery.Document) []*Node {
-	var children []*Node
-	if doc == nil {
-		return nil
-	}
-	doc.Find("a").Each(func(i int, s *goquery.Selection) {
-		rawUrl, ok := s.Attr("href")
-		if ok {
-			url, err := validUrl(rawUrl)
-			if err != nil {
-				return
-			}
-
-			n := newNode(url)
-			children = append(children, n)
-		}
-	})
-
-	return children
 }
 
 func (n *Node) uniq(raw string) bool {
@@ -144,6 +105,10 @@ func (n *Node) uniq(raw string) bool {
 		return false
 	}
 
+	if c.Path+"/" == r.Path || r.Path+"/" == c.Path {
+		return false
+	}
+
 	for _, child := range n.children {
 		return child.uniq(raw)
 	}
@@ -151,21 +116,10 @@ func (n *Node) uniq(raw string) bool {
 	return true
 }
 
-func validUrl(raw string) (string, error) {
-	var u *url.URL
-
-	u, err := url.Parse(raw)
-	if err == nil && u.Scheme != "" && u.Host != "" {
-		return u.String(), nil
-	}
-
-	return "", fmt.Errorf("cannot parse url")
-}
-
 func (n *Node) format(level int) string {
 	var indentation string
-	for i := 0; i <= level; i++ {
+	for i := 0; i < level; i++ {
 		indentation = indentation + "  "
 	}
-	return fmt.Sprintf("%s%s", indentation, n.url)
+	return fmt.Sprintf("%s%s\n", indentation, n.url)
 }

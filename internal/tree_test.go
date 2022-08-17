@@ -6,8 +6,11 @@ import (
 	"testing"
 )
 
-const testUrl = "https://crawler-test.com/"
-const invalidUrl = "invalid"
+const (
+	testUrl     = "https://crawler-test.com/"
+	redirectUrl = "https://crawler-test.com/redirects/redirect_to_404"
+	invalidUrl  = "invalid"
+)
 
 func TestNewTree(t *testing.T) {
 	type args struct {
@@ -36,51 +39,6 @@ func TestNewTree(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewTree(tt.args.root)
 			assert.Equal(t, got, tt.want)
-		})
-	}
-}
-
-func Test_get(t *testing.T) {
-	type args struct {
-		root   *Node
-		target string
-	}
-	tests := []struct {
-		name string
-		args args
-		err  assert.ErrorAssertionFunc
-		want assert.ValueAssertionFunc
-	}{
-		{
-			name: "given a valid test url doesn't return an error",
-			args: args{
-				root: &Node{
-					url:      testUrl,
-					children: []*Node{},
-				},
-				target: testUrl,
-			},
-			err:  assert.NoError,
-			want: assert.NotNil,
-		},
-		{
-			name: "given an invalid test url return an error",
-			args: args{
-				root: &Node{
-					url:      testUrl,
-					children: []*Node{},
-				},
-				target: invalidUrl,
-			},
-			err:  assert.Error,
-			want: assert.Nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := get(tt.args.root, tt.args.target)
-			tt.want(t, got)
-			tt.err(t, err)
 		})
 	}
 }
@@ -237,6 +195,44 @@ func TestNode_uniq(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "returns false if given url is invalid",
+			fields: fields{
+				url: "a",
+				children: []*Node{
+					{
+						url:      "b",
+						children: []*Node{},
+					},
+				},
+			},
+			args: args{
+				raw: "::invalid::",
+			},
+			want: false,
+		},
+		{
+			name: "returns false if node url is invalid",
+			fields: fields{
+				url:      "::invalid::",
+				children: []*Node{},
+			},
+			args: args{
+				raw: "a",
+			},
+			want: false,
+		},
+		{
+			name: "returns false if urls only differ by trailing '/'",
+			fields: fields{
+				url:      "https://a_url.com",
+				children: []*Node{},
+			},
+			args: args{
+				raw: "https://a_url.com/",
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -246,53 +242,7 @@ func TestNode_uniq(t *testing.T) {
 			}
 			got := n.uniq(tt.args.raw)
 
-			assert.Equalf(t, tt.want, got, "uniq(%v)", tt.args.raw)
-		})
-	}
-}
-
-func Test_validUrl(t *testing.T) {
-	type args struct {
-		raw string
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-		err  assert.ErrorAssertionFunc
-	}{
-		{
-			name: "returns url given a valid url",
-			args: args{
-				raw: testUrl,
-			},
-			want: testUrl,
-			err:  assert.NoError,
-		},
-		{
-			name: "returns error given an invalid url",
-			args: args{
-				raw: invalidUrl,
-			},
-			want: "",
-			err:  assert.Error,
-		},
-		{
-			name: "returns error given a path",
-			args: args{
-				raw: "/path",
-			},
-			want: "",
-			err:  assert.Error,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := validUrl(tt.args.raw)
-			if !tt.err(t, err, fmt.Sprintf("validUrl(%v)", tt.args.raw)) {
-				return
-			}
-			assert.Equalf(t, tt.want, got, "validUrl(%v)", tt.args.raw)
+			assert.Equalf(t, got, tt.want, "uniq(%v)", tt.args.raw)
 		})
 	}
 }
@@ -450,4 +400,101 @@ func (n *Node) diff(m *Node) bool {
 	}
 
 	return false
+}
+
+func TestNode_format(t *testing.T) {
+	type fields struct {
+		url      string
+		children []*Node
+	}
+	type args struct {
+		level int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "formats the node with no indentation",
+			fields: fields{
+				url:      "a",
+				children: []*Node{},
+			},
+			args: args{
+				level: 0,
+			},
+			want: fmt.Sprintf("a\n"),
+		},
+		{
+			name: "formats the node with indentation",
+			fields: fields{
+				url:      "a",
+				children: []*Node{},
+			},
+			args: args{
+				level: 2,
+			},
+			want: fmt.Sprintf("    a\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := &Node{
+				url:      tt.fields.url,
+				children: tt.fields.children,
+			}
+			assert.Equalf(t, tt.want, n.format(tt.args.level), "format(%v)", tt.args.level)
+		})
+	}
+}
+
+func TestNode_String(t *testing.T) {
+	type fields struct {
+		url      string
+		children []*Node
+	}
+	type args struct {
+		s           string
+		indentLevel int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "gives the string representation of the tree",
+			fields: fields{
+				url: "a",
+				children: []*Node{
+					{
+						url: "b",
+						children: []*Node{
+							{
+								url:      "c",
+								children: []*Node{},
+							},
+						},
+					},
+				},
+			},
+			args: args{
+				s:           "",
+				indentLevel: 0,
+			},
+			want: "a\n  b\n    c\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := &Node{
+				url:      tt.fields.url,
+				children: tt.fields.children,
+			}
+			assert.Equalf(t, tt.want, n.String(tt.args.s, tt.args.indentLevel), "String(%v, %v)", tt.args.s, tt.args.indentLevel)
+		})
+	}
 }
