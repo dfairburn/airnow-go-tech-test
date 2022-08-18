@@ -17,7 +17,7 @@ To compile `make build` and run with `bin/crawler`
 All business logic is kept within the `internal` package.
 
 #### CLI Flags
-Usage of bin/spider:
+Usage of bin/crawler:
 
 --d --depth int (int) --- specified nesting level for traversal (default 0)
 
