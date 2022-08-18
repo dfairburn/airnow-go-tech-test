@@ -7,14 +7,13 @@ import (
 )
 
 const (
-	baseUrl      = "https://crawler-test.com"
-	testUrl      = "https://crawler-test.com/links/relative_link/a/b"
-	redirectUrl  = "https://crawler-test.com/redirects/redirect_to_404"
-	notFoundUrl  = "http://crawler-test.com/status_codes/status_400"
-	malformedUrl = "http://crawler-test.com/urls/links_to_malformed_urls"
-	brokenUrl    = "https://invalid.crawler-test.com/"
-	invalidUrl   = "::invalid::"
-	timeout      = 1000
+	baseUrl     = "https://crawler-test.com"
+	testUrl     = "https://crawler-test.com/links/relative_link/a/b"
+	redirectUrl = "https://crawler-test.com/redirects/redirect_to_404"
+	notFoundUrl = "http://crawler-test.com/status_codes/status_400"
+	brokenUrl   = "https://invalid.crawler-test.com/"
+	invalidUrl  = "::invalid::"
+	timeout     = 1000
 )
 
 func TestNewTree(t *testing.T) {
@@ -32,9 +31,9 @@ func TestNewTree(t *testing.T) {
 				root: testUrl,
 			},
 			want: &Tree{
-				Root: &Node{
+				Root: &node{
 					url:      testUrl,
-					children: []*Node{},
+					children: []*node{},
 				},
 			},
 		},
@@ -51,7 +50,7 @@ func TestNewTree(t *testing.T) {
 func TestNode_remove(t *testing.T) {
 	type fields struct {
 		url      string
-		children []*Node
+		children []*node
 	}
 	type args struct {
 		target string
@@ -60,54 +59,54 @@ func TestNode_remove(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *Node
+		want   *node
 	}{
 		{
 			name: "removes a given element from the tree",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 					{
 						url: "c",
-						children: []*Node{
+						children: []*node{
 							{
 								url:      "e",
-								children: []*Node{},
+								children: []*node{},
 							},
 						},
 					},
 					{
 						url:      "d",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
 			args: args{
 				target: "e",
 			},
-			want: &Node{
+			want: &node{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 					{
 						url: "c",
-						children: []*Node{
+						children: []*node{
 							{
 								url:      "e",
-								children: []*Node{},
+								children: []*node{},
 							},
 						},
 					},
 					{
 						url:      "d",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -116,22 +115,22 @@ func TestNode_remove(t *testing.T) {
 			name: "doesn't remove element that doesn't exist",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
 			args: args{
 				target: "e",
 			},
-			want: &Node{
+			want: &node{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -140,7 +139,7 @@ func TestNode_remove(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := &Node{
+			n := &node{
 				url:      tt.fields.url,
 				children: tt.fields.children,
 			}
@@ -157,7 +156,7 @@ func TestNode_remove(t *testing.T) {
 func TestNode_uniq(t *testing.T) {
 	type fields struct {
 		url      string
-		children []*Node
+		children []*node
 	}
 	type args struct {
 		raw string
@@ -172,10 +171,10 @@ func TestNode_uniq(t *testing.T) {
 			name: "returns true that a given element is unique in the tree",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -188,10 +187,10 @@ func TestNode_uniq(t *testing.T) {
 			name: "returns false that a given element already exists",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -204,10 +203,10 @@ func TestNode_uniq(t *testing.T) {
 			name: "returns false if given url is invalid",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -220,7 +219,7 @@ func TestNode_uniq(t *testing.T) {
 			name: "returns false if node url is invalid",
 			fields: fields{
 				url:      "::invalid::",
-				children: []*Node{},
+				children: []*node{},
 			},
 			args: args{
 				raw: "a",
@@ -231,7 +230,7 @@ func TestNode_uniq(t *testing.T) {
 			name: "returns false if urls only differ by trailing '/'",
 			fields: fields{
 				url:      "https://a_url.com",
-				children: []*Node{},
+				children: []*node{},
 			},
 			args: args{
 				raw: "https://a_url.com/",
@@ -241,7 +240,7 @@ func TestNode_uniq(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := &Node{
+			n := &node{
 				url:      tt.fields.url,
 				children: tt.fields.children,
 			}
@@ -255,35 +254,35 @@ func TestNode_uniq(t *testing.T) {
 func TestNode_insert(t *testing.T) {
 	type fields struct {
 		url      string
-		children []*Node
+		children []*node
 	}
 	type args struct {
-		child *Node
+		child *node
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
-		want   *Node
+		want   *node
 	}{
 		{
 			name: "inserts a child into the root node",
 			fields: fields{
 				url:      "a",
-				children: []*Node{},
+				children: []*node{},
 			},
 			args: args{
-				child: &Node{
+				child: &node{
 					url:      "b",
-					children: []*Node{},
+					children: []*node{},
 				},
 			},
-			want: &Node{
+			want: &node{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -292,25 +291,25 @@ func TestNode_insert(t *testing.T) {
 			name: "doesn't insert if child already exists in the tree",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
 			args: args{
-				child: &Node{
+				child: &node{
 					url:      "b",
-					children: []*Node{},
+					children: []*node{},
 				},
 			},
-			want: &Node{
+			want: &node{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -319,25 +318,25 @@ func TestNode_insert(t *testing.T) {
 			name: "doesn't insert if host and path is the same",
 			fields: fields{
 				url: "http://a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "http://b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
 			args: args{
-				child: &Node{
+				child: &node{
 					url:      "https://a",
-					children: []*Node{},
+					children: []*node{},
 				},
 			},
-			want: &Node{
+			want: &node{
 				url: "http://a",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "http://b",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -346,29 +345,29 @@ func TestNode_insert(t *testing.T) {
 			name: "inserts if host are same but paths are different",
 			fields: fields{
 				url: "http://a.com",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "http://b.com",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
 			args: args{
-				child: &Node{
+				child: &node{
 					url:      "https://a.com/b/c",
-					children: []*Node{},
+					children: []*node{},
 				},
 			},
-			want: &Node{
+			want: &node{
 				url: "http://a.com",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "http://b.com",
-						children: []*Node{},
+						children: []*node{},
 					},
 					{
 						url:      "https://a.com/b/c",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -377,14 +376,14 @@ func TestNode_insert(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := &Node{
+			n := &node{
 				url:      tt.fields.url,
 				children: tt.fields.children,
 			}
 			n.insert(n, tt.args.child)
 
 			if n.diff(tt.want) {
-				t.Errorf("wrong object recieved\ngot=%s\nwant=%s", n.String("", 0), tt.want.String("", 0))
+				t.Errorf("wrong object recieved\ngot=%s\nwant=%s", n.String(), tt.want.String())
 			}
 		})
 	}
@@ -393,7 +392,7 @@ func TestNode_insert(t *testing.T) {
 func TestNode_format(t *testing.T) {
 	type fields struct {
 		url      string
-		children []*Node
+		children []*node
 	}
 	type args struct {
 		level int
@@ -408,7 +407,7 @@ func TestNode_format(t *testing.T) {
 			name: "formats the node with no indentation",
 			fields: fields{
 				url:      "a",
-				children: []*Node{},
+				children: []*node{},
 			},
 			args: args{
 				level: 0,
@@ -419,7 +418,7 @@ func TestNode_format(t *testing.T) {
 			name: "formats the node with indentation",
 			fields: fields{
 				url:      "a",
-				children: []*Node{},
+				children: []*node{},
 			},
 			args: args{
 				level: 2,
@@ -429,7 +428,7 @@ func TestNode_format(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := &Node{
+			n := &node{
 				url:      tt.fields.url,
 				children: tt.fields.children,
 			}
@@ -441,7 +440,7 @@ func TestNode_format(t *testing.T) {
 func TestNode_String(t *testing.T) {
 	type fields struct {
 		url      string
-		children []*Node
+		children []*node
 	}
 	type args struct {
 		s           string
@@ -457,13 +456,13 @@ func TestNode_String(t *testing.T) {
 			name: "gives the string representation of the tree",
 			fields: fields{
 				url: "a",
-				children: []*Node{
+				children: []*node{
 					{
 						url: "b",
-						children: []*Node{
+						children: []*node{
 							{
 								url:      "c",
-								children: []*Node{},
+								children: []*node{},
 							},
 						},
 					},
@@ -478,16 +477,16 @@ func TestNode_String(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := &Node{
+			n := &node{
 				url:      tt.fields.url,
 				children: tt.fields.children,
 			}
-			assert.Equalf(t, tt.want, n.String(tt.args.s, tt.args.indentLevel), "String(%v, %v)", tt.args.s, tt.args.indentLevel)
+			assert.Equalf(t, tt.want, n.String(), "String(%v, %v)", tt.args.s, tt.args.indentLevel)
 		})
 	}
 }
 
-func (n *Node) diff(m *Node) bool {
+func (n *node) diff(m *node) bool {
 	if n.url != m.url {
 		fmt.Println(n.url, m.url)
 		return true

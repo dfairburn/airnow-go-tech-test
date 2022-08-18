@@ -28,8 +28,8 @@ func get(ctx context.Context, target string) (*goquery.Document, error) {
 	return doc, err
 }
 
-func getLinks(baseUrl string, doc *goquery.Document) []*Node {
-	var children []*Node
+func getLinks(baseUrl string, doc *goquery.Document) []*node {
+	var children []*node
 	if doc == nil {
 		return nil
 	}

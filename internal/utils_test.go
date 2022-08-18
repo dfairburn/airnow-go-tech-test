@@ -119,7 +119,7 @@ func Test_getLinks(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		want *Node
+		want *node
 		args args
 	}{
 		{
@@ -127,24 +127,24 @@ func Test_getLinks(t *testing.T) {
 			args: args{
 				url: testUrl,
 			},
-			want: &Node{
+			want: &node{
 				url: "https://crawler-test.com/links/relative_link/a/b",
-				children: []*Node{
+				children: []*node{
 					{
 						url:      "https://crawler-test.com/links/relative_link/a/b/",
-						children: []*Node{},
+						children: []*node{},
 					},
 					{
 						url:      "https://crawler-test.com/links/relative_link/a/by/z",
-						children: []*Node{},
+						children: []*node{},
 					},
 					{
 						url:      "https://crawler-test.com/links/relative_link/a/b/content/custom_text/relative_link_with_a_slash_at_the_beginning_target",
-						children: []*Node{},
+						children: []*node{},
 					},
 					{
 						url:      "https://crawler-test.com/links/relative_link/a/b?parameter_only_link=1",
-						children: []*Node{},
+						children: []*node{},
 					},
 				},
 			},
@@ -154,7 +154,7 @@ func Test_getLinks(t *testing.T) {
 			args: args{
 				url: notFoundUrl,
 			},
-			want: &Node{},
+			want: &node{},
 		},
 	}
 
@@ -168,7 +168,7 @@ func Test_getLinks(t *testing.T) {
 
 			root.Root.children = getLinks(tt.args.url, doc)
 			if root.Root.diff(tt.want) {
-				t.Errorf("wrong object recieved, got=%v\nwant=%v", root.Root.String("", 0), tt.want.String("", 0))
+				t.Errorf("wrong object recieved, got=%v\nwant=%v", root.Root.String(), tt.want.String())
 			}
 		})
 	}
