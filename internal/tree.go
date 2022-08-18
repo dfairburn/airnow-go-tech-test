@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
@@ -28,8 +29,8 @@ func newNode(url string) *Node {
 	}
 }
 
-func (n *Node) Walk(root *Node, currLevel int, nestLevel int) {
-	doc, err := get(n.url)
+func (n *Node) Walk(ctx context.Context, root *Node, currLevel int, nestLevel int) {
+	doc, err := get(ctx, n.url)
 	if err != nil {
 		root.remove(n.url)
 		log.Println(err)
@@ -39,13 +40,13 @@ func (n *Node) Walk(root *Node, currLevel int, nestLevel int) {
 		return
 	}
 
-	children := getLinks(doc)
+	children := getLinks(root.url, doc)
 	for _, child := range children {
 		n.insert(root, child)
 	}
 
 	for _, child := range n.children {
-		child.Walk(root, currLevel+1, nestLevel)
+		child.Walk(ctx, root, currLevel+1, nestLevel)
 	}
 }
 

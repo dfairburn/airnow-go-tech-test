@@ -1,9 +1,11 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func Test_get(t *testing.T) {
@@ -33,6 +35,14 @@ func Test_get(t *testing.T) {
 			want: assert.Nil,
 		},
 		{
+			name: "given an invalid test url return an error",
+			args: args{
+				target: brokenUrl,
+			},
+			err:  assert.Error,
+			want: assert.Nil,
+		},
+		{
 			name: "given a url that redirects returns an error",
 			args: args{
 				target: redirectUrl,
@@ -43,7 +53,10 @@ func Test_get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := get(tt.args.target)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+			defer cancel()
+
+			got, err := get(ctx, tt.args.target)
 			tt.want(t, got)
 			tt.err(t, err)
 		})
@@ -52,7 +65,8 @@ func Test_get(t *testing.T) {
 
 func Test_validUrl(t *testing.T) {
 	type args struct {
-		raw string
+		raw  string
+		base string
 	}
 	tests := []struct {
 		name string
@@ -63,7 +77,8 @@ func Test_validUrl(t *testing.T) {
 		{
 			name: "returns url given a valid url",
 			args: args{
-				raw: testUrl,
+				raw:  testUrl,
+				base: testUrl,
 			},
 			want: testUrl,
 			err:  assert.NoError,
@@ -71,23 +86,25 @@ func Test_validUrl(t *testing.T) {
 		{
 			name: "returns error given an invalid url",
 			args: args{
-				raw: invalidUrl,
+				raw:  invalidUrl,
+				base: testUrl,
 			},
 			want: "",
 			err:  assert.Error,
 		},
 		{
-			name: "returns error given a path",
+			name: "returns full url given a relative path",
 			args: args{
-				raw: "/path",
+				raw:  "/path",
+				base: baseUrl,
 			},
-			want: "",
-			err:  assert.Error,
+			want: "https://crawler-test.com/path",
+			err:  assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := validUrl(tt.args.raw)
+			got, err := validUrl(tt.args.base, tt.args.raw)
 			if !tt.err(t, err, fmt.Sprintf("validUrl(%v)", tt.args.raw)) {
 				return
 			}
@@ -97,54 +114,62 @@ func Test_validUrl(t *testing.T) {
 }
 
 func Test_getLinks(t *testing.T) {
+	type args struct {
+		url string
+	}
 	tests := []struct {
 		name string
-		want []*Node
-		err  assert.ErrorAssertionFunc
+		want *Node
+		args args
 	}{
 		{
 			name: "get links retrieves all hrefs on a page",
-			want: []*Node{
-				{
-					url:      "http://www.s%C3%B8kbar.no",
-					children: []*Node{},
-				},
-				{
-					url:      "https://crawler-test.com//urls/double_slash/disallowed_start",
-					children: []*Node{},
-				},
-				{
-					url:      "https://subdomain.crawler-test.com",
-					children: []*Node{},
-				},
-				{
-					url:      "https://invalid.crawler-test.com",
-					children: []*Node{},
-				},
-				{
-					url:      "http://crawler-test.com/",
-					children: []*Node{},
-				},
-				{
-					url:      "http://crawler-test.com",
-					children: []*Node{},
-				},
-				{
-					url:      "https://crawler-test.com",
-					children: []*Node{},
+			args: args{
+				url: testUrl,
+			},
+			want: &Node{
+				url: "https://crawler-test.com/links/relative_link/a/b",
+				children: []*Node{
+					{
+						url:      "https://crawler-test.com/links/relative_link/a/b/",
+						children: []*Node{},
+					},
+					{
+						url:      "https://crawler-test.com/links/relative_link/a/by/z",
+						children: []*Node{},
+					},
+					{
+						url:      "https://crawler-test.com/links/relative_link/a/b/content/custom_text/relative_link_with_a_slash_at_the_beginning_target",
+						children: []*Node{},
+					},
+					{
+						url:      "https://crawler-test.com/links/relative_link/a/b?parameter_only_link=1",
+						children: []*Node{},
+					},
 				},
 			},
-			err: assert.NoError,
+		},
+		{
+			name: "returns early with an invalid url",
+			args: args{
+				url: notFoundUrl,
+			},
+			want: &Node{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			root := NewTree(testUrl)
-			doc, err := get(root.Root.url)
+			root := NewTree(tt.args.url)
+			doc, err := get(context.Background(), root.Root.url)
+			if err != nil {
+				return
+			}
 
-			tt.err(t, err)
-			assert.Equalf(t, tt.want, getLinks(doc), "getLinks(%v)", doc)
+			root.Root.children = getLinks(tt.args.url, doc)
+			if root.Root.diff(tt.want) {
+				t.Errorf("wrong object recieved, got=%v\nwant=%v", root.Root.String("", 0), tt.want.String("", 0))
+			}
 		})
 	}
 }

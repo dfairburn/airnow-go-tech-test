@@ -7,9 +7,14 @@ import (
 )
 
 const (
-	testUrl     = "https://crawler-test.com/"
-	redirectUrl = "https://crawler-test.com/redirects/redirect_to_404"
-	invalidUrl  = "invalid"
+	baseUrl      = "https://crawler-test.com"
+	testUrl      = "https://crawler-test.com/links/relative_link/a/b"
+	redirectUrl  = "https://crawler-test.com/redirects/redirect_to_404"
+	notFoundUrl  = "http://crawler-test.com/status_codes/status_400"
+	malformedUrl = "http://crawler-test.com/urls/links_to_malformed_urls"
+	brokenUrl    = "https://invalid.crawler-test.com/"
+	invalidUrl   = "::invalid::"
+	timeout      = 1000
 )
 
 func TestNewTree(t *testing.T) {
@@ -385,23 +390,6 @@ func TestNode_insert(t *testing.T) {
 	}
 }
 
-func (n *Node) diff(m *Node) bool {
-	if n.url != m.url {
-		fmt.Println(n.url, m.url)
-		return true
-	}
-
-	if len(n.children) != len(m.children) {
-		return true
-	}
-
-	for i, child := range n.children {
-		return child.diff(m.children[i])
-	}
-
-	return false
-}
-
 func TestNode_format(t *testing.T) {
 	type fields struct {
 		url      string
@@ -497,4 +485,21 @@ func TestNode_String(t *testing.T) {
 			assert.Equalf(t, tt.want, n.String(tt.args.s, tt.args.indentLevel), "String(%v, %v)", tt.args.s, tt.args.indentLevel)
 		})
 	}
+}
+
+func (n *Node) diff(m *Node) bool {
+	if n.url != m.url {
+		fmt.Println(n.url, m.url)
+		return true
+	}
+
+	if len(n.children) != len(m.children) {
+		return true
+	}
+
+	for i, child := range n.children {
+		return child.diff(m.children[i])
+	}
+
+	return false
 }
