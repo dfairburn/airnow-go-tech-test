@@ -90,6 +90,8 @@ func (n *node) remove(target string) {
 	}
 }
 
+// insert checks if the child node to be inserted already appears in the tree. This means we're doing a O(n) traversal
+// of the tree each time we insert, but I felt this was acceptable as it's an easier implementation to save time
 func (n *node) insert(root *node, child *node) {
 	if !root.uniq(child.url) {
 		return

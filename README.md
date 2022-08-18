@@ -1,19 +1,98 @@
 # Airnow GO Tech Test
 
-## Submission Guideline
-Please fork this repository. When you have finished your work please provide a link to your own repository. You are also welcome to host this on Github if you don't have a Bitbucket account.
+---
+### Setup
+#### Requirements
 
-## Task
-We would like you to prepare a simple command line tool for parsing nested links.
+* go v1.19
+* make
 
-The application must accept the target source and nesting level as input parameters. The application must take the original page, find all the links and follow them until we get to the specified nesting level. One parent page is one level.  The application should print the list with children links tabbed by nested level.
-Please use [goquery](https://github.com/PuerkitoBio/goquery) for getting links from the target URL. 
+#### Running
+To run with the go interpreter `make run`
 
-This task should take you somewhere from a few hours to a day. Please don't take any more time than this, we are more interested in your approach than completing the task.
+To compile `make build` and run with `bin/crawler`
 
-## Outcomes
-Some things we would like to see:
+#### Reviewing
 
-- Readme with a instruction how to install and run the application.
-- Frequent commits.
-- Few unit tests for the core logic.
+All business logic is kept within the `internal` package.
+
+#### CLI Flags
+Usage of bin/spider:
+
+--d --depth int (int) --- specified nesting level for traversal (default 0)
+
+--t --target (string) --- the url to crawl (default "https://crawler-test.com")
+
+--ti --timeout (int) --- overall completion timeout in milliseconds (default 5000)
+
+#### Example Usage
+`./bin/crawler -t https://crawler-test.com -d 3 -ti 5000`
+
+#### Testing
+
+Run the test suite with `make test`
+
+Generate coverage with `make cov`
+
+#### Cleanup
+
+Run `make clean` to remove coverage files and binaries
+
+#### Makefile
+
+`cov`       - Generate code coverage and run in browser
+
+`test`      - Runs the full test suite
+
+`clean`     - Removes coverage.out/coverage.out.tmp files, removes the `bin/crawler` binary
+
+`run`       - Runs the crawler CLI through the go interpreter
+
+`build`     - Compiles the binary into bin/crawler
+
+---
+#### Decisions
+
+I opted to store the links in a tree structure. This made sense to me as output of the links came for free,
+as the tree already has a parent-child relationship on insert, therefore it's trivial to print links with the
+correct indentation level.
+
+I was conscious that I didn't have 100% code completion, I stopped at the point that it'd take too long for the
+bounds of this exercise to chase the extra ~10% of coverage, also coupled with the fact I couldn't find appropriate
+pages to test these edge cases on.
+
+Another decision was to not implement my own service to run tests against. I've gone with using crawler-test.com, it seemed
+to have a comprehensive amount of edge cases for free which allowed me to test my code more thoroughly in the allowed
+time, rather than if I'd have tried to think and implement all of these edge cases in a stand-alone docker container.
+
+I decided to remove duplicate nodes in the tree too - I thought this would be expected of the exercise as otherwise
+it'd get stuck in an endless loop if one page linked back to it's parent, which is quite common.
+
+The insertion method on the tree structure is front-loaded with checking that the child to be added is unique within the
+tree. This was a conscious decision, I'm sure there'd be a way to optimise this, I don't think it's the most performant
+implementation, however I thought optimising this for performance was overkill.
+
+I decided on handling relative links and external links as I felt this was within the bounds of the project.
+I also decided to discard anything that wasn't a 200 success code. I could have accepted just a http.Success, however I
+felt that I'd also be swamped down with bugs and edge cases. I could be wrong on that, but that was my intuition when
+implementing the get() function.
+
+Structure-wise, I feel I've gone with a fairly common layout - `cmd` just holding main and the `internal` package takes
+care of the actual logic and unit tests. I haven't extensively written integration tests, just enough that I'm happy
+that it works as expected. As a side-note, this could have been structured as a few .go files in the root of the project,
+however as it's a CLI I felt it semantic to have an `internal` package for code that isn't meant for external parties to use.
+
+---
+#### Areas of Improvement
+
+A less fragile test harness would be probably number one. I really don't like the idea that my tests are directly correlated
+to my internet connection.
+
+Concurrency, currently this is running in a single thread and the performance is slow. It's currently bottle-necked
+by internet connection and having to wait for a single query to return before starting the next. I had toyed around with
+making the Walk method concurrent and spawning recursive function calls as separate goroutines, however, again I thought
+this was also overkill for the project and would take me a bit more time to properly think about how to implement 
+concurrency without deadlocking.
+
+It would have been nice to have some more thorough documentation, however as this is a CLI and not a library I felt it
+was acceptable to lightly sprinkle some documentation instead of having lots of heavy explanations.

@@ -14,4 +14,4 @@ run:
 	go run ./cmd/main.go
 
 build:
-	go build -o bin/spider ./cmd/main.go
+	go build -o bin/crawler ./cmd/main.go
