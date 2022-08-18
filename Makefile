@@ -5,7 +5,7 @@ cov:
 	go tool cover -html=cover.out
 
 clean:
-	rm -f ./cover.out ./cover.out.tmp ./bin/spider
+	rm -f ./cover.out ./cover.out.tmp ./bin/crawler
 
 test:
 	go test ./...

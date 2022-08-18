@@ -7,6 +7,9 @@
 cover.out
 cover.out.tmp
 
+# Go binary files
+./bin/*
+
 # Node artifact files
 node_modules/
 dist/
