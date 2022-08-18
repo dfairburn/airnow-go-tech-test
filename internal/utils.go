@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 )
@@ -19,8 +21,14 @@ func get(ctx context.Context, target string) (*goquery.Document, error) {
 		return nil, err
 	}
 
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(res.Body)
+
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("expected status code 200, got=%d", res.StatusCode)
 	}
 

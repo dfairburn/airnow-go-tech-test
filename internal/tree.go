@@ -19,7 +19,7 @@ type node struct {
 	children []*node
 }
 
-// NewTree returns a new Tree struct initialized with a given root url
+// NewTree returns a new Tree struct initialized with a given root url to crawl
 func NewTree(root string) *Tree {
 	return &Tree{
 		newNode(root),
@@ -35,7 +35,10 @@ func newNode(url string) *node {
 
 // Walk queries the root url and recursively queries the children for their links until the depth is met.
 // A call to get() is made first, as if this call fails, the node is removed from the tree so that it's cleared of
-// broken urls as it continues to walk.
+// broken urls as it continues to walk. It passes down a copy of the root node so that deeper levels in the tree
+// can refer to the root not to remove children from and check uniqueness of the urls within the tree. It also doesn't
+// allow insertion of the same link multiple times in the tree, although this doesn't currently handle the difference
+// between relative links and absolute links.
 func (n *node) Walk(ctx context.Context, root *node, currDepth int, depth int) {
 	doc, err := get(ctx, n.url)
 	if err != nil {
@@ -48,8 +51,13 @@ func (n *node) Walk(ctx context.Context, root *node, currDepth int, depth int) {
 	}
 
 	children := getLinks(root.url, doc)
+	var curr string
 	for _, child := range children {
+		if curr == child.url {
+			continue
+		}
 		n.insert(root, child)
+		curr = child.url
 	}
 
 	for _, child := range n.children {
@@ -78,12 +86,16 @@ func (n *node) indent(s string, indentLevel int) string {
 	return s
 }
 
+// remove walks the tree from a given node to remove the first target node found that is matched on the node.url
 func (n *node) remove(target string) {
+	if len(n.children) == 0 {
+		return
+	}
+
 	for i, child := range n.children {
 		if child.url == target {
 			newChildren := append(n.children[:i], n.children[i+1:]...)
 			n.children = newChildren
-			return
 		}
 
 		child.remove(target)
@@ -100,6 +112,11 @@ func (n *node) insert(root *node, child *node) {
 	n.children = append(n.children, child)
 }
 
+// uniq finds if a given url is unique within a tree. This method decides that relative paths compared with absolute paths
+// to the same endpoint are non-unique. It also decides that the difference between https and http is non-unique too.
+// examples given a base url of http://foo-bar.com:
+// http://foo-bar.com & https://foo-bar.com/ == false
+// /baz & https://foo-bar.com/baz == false
 func (n *node) uniq(raw string) bool {
 	current := n.url
 
@@ -132,6 +149,7 @@ func (n *node) uniq(raw string) bool {
 	return true
 }
 
+// format is a helper method to indent the string format of nodes to the given level
 func (n *node) format(level int) string {
 	var indentation string
 	for i := 0; i < level; i++ {

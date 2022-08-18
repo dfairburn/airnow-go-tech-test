@@ -37,6 +37,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
 	defer cancel()
 
+	fmt.Printf("crawling links from %s...\n", target)
+
 	tree.Root.Walk(ctx, tree.Root, 0, depth)
 
 	fmt.Println(tree.Root.String())
